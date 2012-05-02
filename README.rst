@@ -20,6 +20,7 @@ minus 1 byte
  print len(sfs.open('128KB').read())
  131072
 
+
 The folder structure can also be used to determine the content of the files::
 
  print sfs.open('zeros/5B').read(5)
@@ -27,6 +28,7 @@ The folder structure can also be used to determine the content of the files::
 
  print sfs.open('ones/128KB').read(5)
  11111
+
 
 File content can also be random::
 
@@ -36,3 +38,4 @@ File content can also be random::
  131071
  print len(sfs.open('random/128KB+1').read())
  131073
+
