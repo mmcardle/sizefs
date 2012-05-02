@@ -6,7 +6,7 @@ SizeFS
 A mock Filesystem that exists in memory only. Returns files of a size as
 specified by the filename
 
-For example, reading a file called 128Mb+1 will return a file of 128 Megabytes
+For example, reading a file named 128Mb+1 will return a file of 128 Megabytes
 minus 1 byte
 
 >>> sfs = SizeFS()
