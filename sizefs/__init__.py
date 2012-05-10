@@ -108,6 +108,7 @@ def _get_size(filename):
     else:
         return 0
 
+
 class Filler(object):
 
     def __init__(self, choices=None, random=False):
@@ -120,7 +121,7 @@ class Filler(object):
         if self.random:
             return ''.join(random.choice(self.choices) for x in range(size))
         else:
-            count = (size/len(self.choices))+1
+            count = (size / len(self.choices)) + 1
             return (count * self.choices)[:size]
 
 
@@ -129,7 +130,7 @@ class SizeFile(object):
     A mock file object that returns a specified number of bytes
     """
 
-    def __init__(self, path, size, filler=Filler(choices='0') ):
+    def __init__(self, path, size, filler=Filler(choices='0')):
         self.closed = False
         self.length = size
         self.pos = 0
@@ -175,7 +176,8 @@ class DirEntry(object):  # pylint: disable=R0902
     A directory entry. Can be a file or folder.
     """
 
-    def __init__(self, dir_type, name, contents=None, filler=Filler(choices='0')):
+    def __init__(self, dir_type, name, contents=None,
+                 filler=Filler(choices='0')):
 
         assert dir_type in ("dir", "file"), "Type must be dir or file!"
 
@@ -222,14 +224,14 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
     """
     def __init__(self, *args, **kwargs):
         super(SizeFS, self).__init__(*args, **kwargs)
-            #thread_synchronize=_thread_synchronize_default)
+        #thread_synchronize=_thread_synchronize_default)
         self.sizes = [1, 10, 100]
         self.si_units = ['K', 'M', 'G']
         self.units = ["B", "b"]
         files = ["%s%s%s" % (size, si, unit)
-                  for size in self.sizes
-                  for si in self.si_units
-                  for unit in self.units]
+                 for size in self.sizes
+                 for si in self.si_units
+                 for unit in self.units]
         self.root = DirEntry('dir', 'root')
 
         self.zeros = DirEntry('dir', 'zeros', filler=Filler(choices='0'))
