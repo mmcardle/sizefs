@@ -38,7 +38,6 @@ class ContentGen(object):
     def _build_result(self, working):
         result = ""
         current_expression = ""
-        last = ""
         options = []
 
         while len(working) > 0:
