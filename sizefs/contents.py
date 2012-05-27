@@ -31,7 +31,7 @@ class ContentGen(object):
     #   <Pattern> ::= <Expression> | <Expression> <Pattern>
     #   <Expression> ::= <Char> | <Char> <Multiplier> | "(" <Expression> ")" <Multiplier> | "[" <Range> "]"
     #   <Multiplier> ::= "*" | "+" | '{' <Num> '}'
-    #   <Range> ::= <Char> | <Char> "-" <Char> | <Range> "," <Range>
+    #   <Range> ::= <Char> | <Char> "-" <Char> | <Range> "," <Range> | <Range> <Range>
     #
     # The grammar above can probably be improved, but we'll look into that later
     # For now we have no escapes, so *,+,{,},[,],(,) are reserved
