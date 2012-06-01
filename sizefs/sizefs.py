@@ -107,6 +107,97 @@ def _get_size(filename):
     else:
         return 0
 
+class SizeFile(object):
+    """
+    A mock file object that returns a specified number of bytes
+    """
+
+    def __init__(self, path, size, filler=Filler(pattern="0")):
+        self.closed = False
+        self.length = size
+        self.pos = 0
+        self.filler = filler
+        self.path = path
+
+    def close(self):
+        """ close the file to prevent further reading """
+        self.closed = True
+
+    def read(self, size=None):
+        """ read size from the file, or if size is None read to end """
+        if self.pos >= self.length or self.closed:
+            return ''
+        if size is None:
+            toread = self.length - self.pos
+            if toread > 0:
+                return self.filler.fill(toread)
+            else:
+                return ''
+        else:
+            if size + self.pos >= self.length:
+                toread = self.length - self.pos
+                self.pos = self.length
+                return self.filler.fill(toread)
+            else:
+                toread = size
+                self.pos = self.pos + size
+                return self.filler.fill(toread)
+
+    def seek(self, offset):
+        """ seek the position by a distance of 'offset' bytes
+        """
+        self.pos = self.pos + offset
+
+    def tell(self):
+        """ return how much of the file is left to read """
+        return self.pos
+
+
+class DirEntry(object):  # pylint: disable=R0902
+    """
+    A directory entry. Can be a file or folder.
+    """
+
+    def __init__(self, dir_type, name, contents=None,
+                 filler=Filler(pattern="0")):
+
+        assert dir_type in ("dir", "file"), "Type must be dir or file!"
+
+        self.type = dir_type
+        self.name = name
+
+        if contents is None and dir_type == "dir":
+            contents = {}
+
+        self.filler = filler
+        self.contents = contents
+        self.mem_file = None
+        self.created_time = datetime.datetime.now()
+        self.modified_time = self.created_time
+        self.accessed_time = self.created_time
+
+        if self.type == 'file':
+            self.mem_file = SizeFile(name, _get_size(name), filler=filler)
+
+    def desc_contents(self):
+        """ describes the contents of this DirEntry """
+        if self.isfile():
+            return "<file %s>" % self.name
+        elif self.isdir():
+            return "<dir %s>" % "".join(
+                "%s: %s" % (k, v.desc_contents())
+                    for k, v in self.contents.iteritems())
+
+    def isdir(self):
+        """ is this DirEntry a directory """
+        return self.type == "dir"
+
+    def isfile(self):
+        """ is this DirEntry a file """
+        return self.type == "file"
+
+    def __str__(self):
+        return "%s: %s" % (self.name, self.desc_contents())
 
 class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
     """
@@ -265,95 +356,3 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-
-class SizeFile(object):
-    """
-    A mock file object that returns a specified number of bytes
-    """
-
-    def __init__(self, path, size, filler=Filler(pattern="0")):
-        self.closed = False
-        self.length = size
-        self.pos = 0
-        self.filler = filler
-        self.path = path
-
-    def close(self):
-        """ close the file to prevent further reading """
-        self.closed = True
-
-    def read(self, size=None):
-        """ read size from the file, or if size is None read to end """
-        if self.pos >= self.length or self.closed:
-            return ''
-        if size is None:
-            toread = self.length - self.pos
-            if toread > 0:
-                return self.filler.fill(toread)
-            else:
-                return ''
-        else:
-            if size + self.pos >= self.length:
-                toread = self.length - self.pos
-                self.pos = self.length
-                return self.filler.fill(toread)
-            else:
-                toread = size
-                self.pos = self.pos + size
-                return self.filler.fill(toread)
-
-    def seek(self, offset):
-        """ seek the position by a distance of 'offset' bytes
-        """
-        self.pos = self.pos + offset
-
-    def tell(self):
-        """ return how much of the file is left to read """
-        return self.pos
-
-
-class DirEntry(object):  # pylint: disable=R0902
-    """
-    A directory entry. Can be a file or folder.
-    """
-
-    def __init__(self, dir_type, name, contents=None,
-                 filler=Filler(pattern="0")):
-
-        assert dir_type in ("dir", "file"), "Type must be dir or file!"
-
-        self.type = dir_type
-        self.name = name
-
-        if contents is None and dir_type == "dir":
-            contents = {}
-
-        self.filler = filler
-        self.contents = contents
-        self.mem_file = None
-        self.created_time = datetime.datetime.now()
-        self.modified_time = self.created_time
-        self.accessed_time = self.created_time
-
-        if self.type == 'file':
-            self.mem_file = SizeFile(name, _get_size(name), filler=filler)
-
-    def desc_contents(self):
-        """ describes the contents of this DirEntry """
-        if self.isfile():
-            return "<file %s>" % self.name
-        elif self.isdir():
-            return "<dir %s>" % "".join(
-                "%s: %s" % (k, v.desc_contents())
-                    for k, v in self.contents.iteritems())
-
-    def isdir(self):
-        """ is this DirEntry a directory """
-        return self.type == "dir"
-
-    def isfile(self):
-        """ is this DirEntry a file """
-        return self.type == "file"
-
-    def __str__(self):
-        return "%s: %s" % (self.name, self.desc_contents())
