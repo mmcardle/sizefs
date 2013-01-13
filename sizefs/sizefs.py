@@ -37,6 +37,11 @@ File content can also be random
 >>> print len(sfs.open('random/128KB+1').read())
 131073
 
+File content for common file size limits
+
+>>> print sfs.listdir('common')
+[u'100MB-1', u'4GB+1', u'100MB+1', u'4GB-1', u'2GB-1', u'2GB+1']
+
 """
 
 __author__ = 'mm'
@@ -218,7 +223,7 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         self.zeros = DirEntry('dir', 'zeros', filler=Filler(pattern="0"))
         self.ones = DirEntry('dir', 'ones', filler=Filler(pattern="1"))
         self.random = DirEntry('dir', 'random', filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
-        self.common = DirEntry('dir', 'common')
+        self.common = DirEntry('dir', 'common', filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
 
         for filename in files:
             self.zeros.contents[filename] = DirEntry(
@@ -227,6 +232,22 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
                 'file', filename, filler=Filler(pattern="1"))
             self.random.contents[filename] = DirEntry(
                 'file', filename, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+
+        # Create a list of common file size limits
+        common_sizes = [
+            '100MB', # PHP default
+            '2GB', # signed int
+            '4GB', # unsigned int
+        ]
+
+        for filename in common_sizes:
+            # Take the base file size limit and plus/minus 1 byte
+            plus_one = "%s+1" % filename
+            minus_one = "%s-1" % filename
+            self.common.contents[plus_one] = DirEntry(
+                'file', plus_one, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+            self.common.contents[minus_one] = DirEntry(
+                'file', minus_one, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
 
         self.root.contents['zeros'] = self.zeros
         self.root.contents['ones'] = self.ones

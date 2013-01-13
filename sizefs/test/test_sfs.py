@@ -1,6 +1,6 @@
 __author__ = 'jjw'
 
-from sizefs.sizefs import SizeFS
+from sizefs import SizeFS
 import re
 
 sfs = SizeFS()
