@@ -55,7 +55,7 @@ FILE_REGEX = re.compile("(?P<size>[0-9]*)(?P<si>[TGMK])*"
 ONE_K = 1024
 
 
-def __get_shift(match):
+def __get_shift__(match):
     """
     Parses the shift part of a filename e.g. +128, -110
     """
@@ -71,7 +71,7 @@ def __get_shift(match):
     return shift
 
 
-def _get_size(filename):
+def __get_size__(filename):
     """
     Parses the filename to get the size of a file
     e.g. 128Mb+12, 110Mb-10b
@@ -81,7 +81,7 @@ def _get_size(filename):
         size_str = match.group('size')
         si_unit = match.group('si')
         unit = match.group('unit')
-        shift = __get_shift(match)
+        shift = __get_shift__(match)
         div = 1
         if unit == 'b':
             div = 8
@@ -177,7 +177,7 @@ class DirEntry(object):  # pylint: disable=R0902
         self.accessed_time = self.created_time
 
         if self.type == 'file':
-            self.mem_file = SizeFile(name, _get_size(name), filler=filler)
+            self.mem_file = SizeFile(name, __get_size__(name), filler=filler)
 
     def desc_contents(self):
         """ describes the contents of this DirEntry """
@@ -346,7 +346,7 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
                 file_dir_entry.accessed_time = datetime.datetime.now()
                 return file_dir_entry.mem_file
             else:
-                size = _get_size(file_name)
+                size = __get_size__(file_name)
                 mem_file = SizeFile(path, size, filler=parent_dir_entry.filler)
                 return mem_file
 
