@@ -12,7 +12,7 @@ setup(
     #url='http://pypi.python.org/pypi/SizeFS/',
     license='LICENSE.txt',
     description='SizeFS is a tool for creating files of particular sizes.',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     install_requires=[
         "fs>=0.4.0",
         ],
