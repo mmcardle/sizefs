@@ -44,16 +44,17 @@ File content for common file size limits
 
 """
 
+
 __author__ = 'mm'
 
 import datetime
 import re
+import os
 import stat
+from contents import Filler
 from fs.path import iteratepath, pathsplit, normpath
 from fs.base import FS, synchronize
 from fs.errors import ResourceNotFoundError, ResourceInvalidError
-from contents import Filler
-
 FILE_REGEX = re.compile("(?P<size>[0-9]*)(?P<si>[TGMK])*"
                         "(?P<unit>[bB]?)(?P<operator>[\+|\-]?)"
                         "(?P<shift>\d*)")
@@ -112,6 +113,7 @@ def __get_size__(filename):
     else:
         return 0
 
+
 class SizeFile(object):
     """
     A mock file object that returns a specified number of bytes
@@ -157,6 +159,8 @@ class SizeFile(object):
         """ return how much of the file is left to read """
         return self.pos
 
+    def flush(self):
+        pass
 
 class DirEntry(object):  # pylint: disable=R0902
     """
@@ -191,7 +195,7 @@ class DirEntry(object):  # pylint: disable=R0902
         elif self.isdir():
             return "<dir %s>" % "".join(
                 "%s: %s" % (k, v.desc_contents())
-                    for k, v in self.contents.iteritems())
+                for k, v in self.contents.iteritems())
 
     def isdir(self):
         """ is this DirEntry a directory """
@@ -202,13 +206,55 @@ class DirEntry(object):  # pylint: disable=R0902
         return self.type == "file"
 
     def __str__(self):
-        return "%s: %s" % (self.name, self.desc_contents())
+        return "%s:" % (self.name)#, self.desc_contents())
+
+
+log = open('log','w')
+indent = 0
+indStr = '  '
+
+
+def logmethod(methodname):
+
+    def _method(self, *argl, **argd):
+        global indent
+        #parse the arguments and create a string representation
+        args = []
+        for item in argl:
+            args.append('%s' % str(item))
+        for key,item in argd.items():
+            args.append('%s=%s' % (key,str(item)))
+        arg_str = ','.join(args)
+        print methodname, arg_str
+        return_val = getattr(self,'_H_%s' % methodname)(*argl,**argd)
+        print methodname, type(return_val)
+        return return_val
+
+    return _method
+
+
+class LogTheMethods(type):
+    def __new__(cls,classname,bases,classdict):
+        logmatch = re.compile(classdict.get('logMatch','.*'))
+
+        for attr,item in classdict.items():
+            if callable(item) and logmatch.match(attr):
+                classdict['_H_%s'%attr] = item    # rebind the method
+                classdict[attr] = logmethod(attr) # replace method by wrapper
+
+        return type.__new__(cls,classname,bases,classdict)
+
 
 class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
     """
     A mock file system that returns files of specified sizes and content
     """
+
+    __metaclass__ = LogTheMethods
+    logMatch = '.*'
+
     def __init__(self, *args, **kwargs):
+        self.verbose = kwargs.pop("verbose", False)
         super(SizeFS, self).__init__(*args, **kwargs)
         #thread_synchronize=_thread_synchronize_default)
         self.sizes = [1, 10, 100]
@@ -222,8 +268,14 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
 
         self.zeros = DirEntry('dir', 'zeros', filler=Filler(pattern="0"))
         self.ones = DirEntry('dir', 'ones', filler=Filler(pattern="1"))
-        self.random = DirEntry('dir', 'random', filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
-        self.common = DirEntry('dir', 'common', filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+        self.random = DirEntry('dir', 'random',
+                               filler=Filler(regenerate=True,
+                                             pattern="[a-z,A-Z,0-9]",
+                                             max_random=128))
+        self.common = DirEntry('dir', 'common',
+                               filler=Filler(regenerate=True,
+                                             pattern="[a-z,A-Z,0-9]",
+                                             max_random=128))
 
         for filename in files:
             self.zeros.contents[filename] = DirEntry(
@@ -231,13 +283,15 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
             self.ones.contents[filename] = DirEntry(
                 'file', filename, filler=Filler(pattern="1"))
             self.random.contents[filename] = DirEntry(
-                'file', filename, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+                'file', filename,
+                filler=Filler(regenerate=True, pattern="[a-z,A-Z,0-9]",
+                              max_random=128))
 
         # Create a list of common file size limits
         common_sizes = [
-            '100MB', # PHP default
-            '2GB', # signed int
-            '4GB', # unsigned int
+            '100MB',  # PHP default
+            '2GB',  # signed int
+            '4GB',  # unsigned int
         ]
 
         for filename in common_sizes:
@@ -245,9 +299,13 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
             plus_one = "%s+1" % filename
             minus_one = "%s-1" % filename
             self.common.contents[plus_one] = DirEntry(
-                'file', plus_one, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+                'file', plus_one,
+                filler=Filler(regenerate=True, pattern="[a-z,A-Z,0-9]",
+                              max_random=128))
             self.common.contents[minus_one] = DirEntry(
-                'file', minus_one, filler=Filler(regenerate=True,pattern="[a-z,A-Z,0-9]",max_random=128))
+                'file', minus_one,
+                filler=Filler(regenerate=True, pattern="[a-z,A-Z,0-9]",
+                              max_random=128))
 
         self.root.contents['zeros'] = self.zeros
         self.root.contents['ones'] = self.ones
@@ -262,10 +320,10 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         current_dir = self.root
         for path_component in iteratepath(dir_path):
             if current_dir.contents is None:
-                return None
+                return self.zeros.contents.get(path_component, None)
             dir_entry = current_dir.contents.get(path_component, None)
             if dir_entry is None:
-                return None
+                return self.zeros.contents.get(path_component, None)
             current_dir = dir_entry
         return current_dir
 
@@ -279,8 +337,10 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         return dir_item.isdir()
 
     def add_regex_dir(self, name, regex, max_random=128, regenerate=True):
-        dir = DirEntry('dir', name, filler=Filler(regenerate=regenerate,pattern=regex,max_random=max_random))
-        self.root.contents[name] = dir
+        _dir = DirEntry('dir', name,
+                       filler=Filler(regenerate=regenerate, pattern=regex,
+                                     max_random=max_random))
+        self.root.contents[name] = _dir
 
     @synchronize
     def isfile(self, path):
@@ -322,7 +382,7 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
             if not isinstance(_path, unicode):
                 paths[i] = unicode(_path)
         p_dirs = self._listdir_helper(path, paths, wildcard, full,
-            absolute, dirs_only, files_only)
+                                      absolute, dirs_only, files_only)
         return p_dirs
 
     @synchronize
@@ -330,7 +390,18 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         dir_entry = self._get_dir_entry(path)
 
         if dir_entry is None:
-            raise ResourceNotFoundError(path)
+            info = {}
+            info['st_mode'] = 0666 | stat.S_IFREG
+            fname = os.path.basename(path)
+            try:
+                info['size'] = __get_size__(fname)
+                now = datetime.datetime.now()
+                info['created_time'] = now
+                info['modified_time'] = now
+                info['accessed_time'] = now
+                return info
+            except ValueError:
+                return None
 
         info = {}
         info['created_time'] = dir_entry.created_time
@@ -338,6 +409,8 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         info['accessed_time'] = dir_entry.accessed_time
 
         if dir_entry.isdir():
+            info['size'] = 4096
+            info['st_nlink'] = 0
             info['st_mode'] = 0755 | stat.S_IFDIR
         else:
             info['size'] = dir_entry.mem_file.length
@@ -363,7 +436,6 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
                 file_dir_entry = parent_dir_entry.contents[file_name]
                 if file_dir_entry.isdir():
                     raise ResourceInvalidError(path)
-
                 file_dir_entry.accessed_time = datetime.datetime.now()
                 return file_dir_entry.mem_file
             else:
@@ -374,6 +446,8 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         elif 'w' in mode or 'a' in mode:
             raise NotImplementedError
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
