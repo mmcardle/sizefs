@@ -49,6 +49,7 @@ __author__ = 'mm'
 
 import datetime
 import re
+import os
 import stat
 from contents import Filler
 from fs.path import iteratepath, pathsplit, normpath
@@ -212,27 +213,22 @@ log = open('log','w')
 indent = 0
 indStr = '  '
 
-def logmethod(methodname):
-    def _method(self,*argl,**argd):
-        global indent
 
+def logmethod(methodname):
+
+    def _method(self, *argl, **argd):
+        global indent
         #parse the arguments and create a string representation
         args = []
         for item in argl:
             args.append('%s' % str(item))
         for key,item in argd.items():
             args.append('%s=%s' % (key,str(item)))
-        argstr = ','.join(args)
-        '''print >> log,"%s%s.%s(%s) " % (indStr*indent,str(self),methodname,argstr)
-        indent += 1
-        # do the actual method call
-        returnval = getattr(self,'_H_%s' % methodname)(*argl,**argd)
-        indent -= 1
-        print >> log,'%s:'% (indStr*indent), str(returnval)'''
-        print methodname, argstr
-        returnval = getattr(self,'_H_%s' % methodname)(*argl,**argd)
-        print methodname, type(returnval)
-        return returnval
+        arg_str = ','.join(args)
+        print methodname, arg_str
+        return_val = getattr(self,'_H_%s' % methodname)(*argl,**argd)
+        print methodname, type(return_val)
+        return return_val
 
     return _method
 
@@ -247,6 +243,7 @@ class LogTheMethods(type):
                 classdict[attr] = logmethod(attr) # replace method by wrapper
 
         return type.__new__(cls,classname,bases,classdict)
+
 
 class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
     """
@@ -322,17 +319,12 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         dir_path = normpath(dir_path)
         current_dir = self.root
         for path_component in iteratepath(dir_path):
-            print "1"
             if current_dir.contents is None:
-                print "1.1"
                 return self.zeros.contents.get(path_component, None)
             dir_entry = current_dir.contents.get(path_component, None)
-            print "2"
             if dir_entry is None:
-                print "2.1"
                 return self.zeros.contents.get(path_component, None)
             current_dir = dir_entry
-        print "CURDIR", current_dir
         return current_dir
 
     def isdir(self, path):
@@ -400,11 +392,16 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
         if dir_entry is None:
             info = {}
             info['st_mode'] = 0666 | stat.S_IFREG
-            import os
             fname = os.path.basename(path)
-            info['size'] = __get_size__(fname)
-            return info
-            raise ResourceNotFoundError(path)
+            try:
+                info['size'] = __get_size__(fname)
+                now = datetime.datetime.now()
+                info['created_time'] = now
+                info['modified_time'] = now
+                info['accessed_time'] = now
+                return info
+            except ValueError:
+                return None
 
         info = {}
         info['created_time'] = dir_entry.created_time
@@ -440,14 +437,10 @@ class SizeFS(FS):  # pylint: disable=R0902,R0904,R0921
                 if file_dir_entry.isdir():
                     raise ResourceInvalidError(path)
                 file_dir_entry.accessed_time = datetime.datetime.now()
-                print file_dir_entry.mem_file
-
                 return file_dir_entry.mem_file
             else:
                 size = __get_size__(file_name)
-                print "y", path, size
                 mem_file = SizeFile(path, size, filler=parent_dir_entry.filler)
-                print mem_file
                 return mem_file
 
         elif 'w' in mode or 'a' in mode:
